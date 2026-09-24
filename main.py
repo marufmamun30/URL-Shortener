@@ -1,6 +1,7 @@
 import random
 import string
-from pydantic import BaseModel, HttpUrl
+from datetime import date, timedelta
+from pydantic import BaseModel, Field, FutureDate, HttpUrl
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import RedirectResponse
 
@@ -9,6 +10,10 @@ url_mappings = {}
 
 class ShortenRequest(BaseModel):
     long_url: HttpUrl
+    custom_alias: str | None = None
+    expiration_date: FutureDate | None = Field(
+        default_factory=lambda: date.today() + timedelta(days=7)
+    )
 
 def generate_short(length: int = 8) -> str:
     base62_chars = string.digits + string.ascii_letters
@@ -20,7 +25,10 @@ def home():
 
 @app.post("/urls")
 def shorten(request: ShortenRequest):
-    res = generate_short(8)
+    if request.custom_alias:
+        res = request.custom_alias
+    else:
+        res = generate_short()
     url_mappings[res] = str(request.long_url)
     return {"shortened_url": res}
 
